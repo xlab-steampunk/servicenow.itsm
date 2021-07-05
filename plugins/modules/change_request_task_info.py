@@ -71,3 +71,92 @@ records:
   sample:
     - TBD
 """
+
+from ansible.module_utils.basic import AnsibleModule
+
+from ..module_utils import arguments, client, errors, query, utils, table
+from ..module_utils.change_request_task import PAYLOAD_FIELDS_MAPPING
+
+
+def remap_params(query, table_client):
+    query_load = []
+
+    for item in query:
+        q = dict()
+        for k, v in item.items():
+            if k == "type":
+                q["change_task_type"] = (v[0], v[1])
+
+            elif k == "hold_reason":
+                q["on_hold_reason"] = (v[0], v[1])
+
+            elif k == "configuration_item":
+                q["cmdb_ci"] = (v[0], v[1])
+
+            elif k == "change_request_id":
+                q["change_request"] = (v[0], v[1])
+
+            elif k == "change_request_number":
+                change_request = table.find_change_request(table_client, v[1])
+                q["change_request"] = (v[0], change_request["sys_id"])
+
+            elif k == "assigned_to":
+                user = table.find_user(table_client, v[1])
+                q["assigned_to"] = (v[0], user["sys_id"])
+
+            elif k == "assignment_group":
+                assignment_group = table.find_assignment_group(table_client, v[1])
+                q["assignment_group"] = (v[0], assignment_group["sys_id"])
+
+            else:
+                q[k] = v
+
+        query_load.append(q)
+
+    return query_load
+
+
+def sysparms_query(module, table_client, mapper):
+    parsed, err = query.parse_query(module.params["query"])
+    if err:
+        raise errors.ServiceNowError(err)
+
+    remap_query = remap_params(parsed, table_client)
+
+    return query.serialize_query(query.map_query_values(remap_query, mapper))
+
+
+def run(module, table_client):
+    mapper = utils.PayloadMapper(PAYLOAD_FIELDS_MAPPING, module.warn)
+
+    if module.params["query"]:
+        query = {"sysparm_query": sysparms_query(module, table_client, mapper)}
+    else:
+        query = utils.filter_dict(module.params, "sys_id", "number")
+
+    return [
+        mapper.to_ansible(record)
+        for record in table_client.list_records("change_task", query)
+    ]
+
+
+def main():
+    module = AnsibleModule(
+        supports_check_mode=True,
+        argument_spec=dict(
+            arguments.get_spec("instance", "sys_id", "number", "query"),
+        ),
+        mutually_exclusive=[("sys_id", "query"), ("number", "query")],
+    )
+
+    try:
+        snow_client = client.Client(**module.params["instance"])
+        table_client = table.TableClient(snow_client)
+        records = run(module, table_client)
+        module.exit_json(changed=False, records=records)
+    except errors.ServiceNowError as e:
+        module.fail_json(msg=str(e))
+
+
+if __name__ == "__main__":
+    main()

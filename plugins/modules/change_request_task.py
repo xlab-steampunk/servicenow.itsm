@@ -35,7 +35,13 @@ seealso:
 options:
   configuration_item:
     description:
-      - The configuration item (CI) or service that the change task applies to.
+      - The configuration item (CI) or service name that the change task applies to.
+      - Mutually exclusive with I(configuration_item_id).
+    type: str
+  configuration_item_id:
+    description:
+      - The configuration item (CI) or service ID that the change task applies to.
+      - Mutually exclusive with I(configuration_item).
     type: str
   change_request_id:
     description:
@@ -173,3 +179,249 @@ EXAMPLES = """
     state: absent
     number: CTASK0000001
 """
+
+from ansible.module_utils.basic import AnsibleModule
+
+from ..module_utils import arguments, client, table, errors, utils, validation
+from ..module_utils.change_request_task import PAYLOAD_FIELDS_MAPPING
+
+DIRECT_PAYLOAD_FIELDS = (
+    "type",
+    "state",
+    "assigned_to",
+    "assignment_group",
+    "short_description",
+    "description",
+    "on_hold",
+    "hold_reason",
+    "planned_start_date",
+    "planned_end_date",
+    "close_code",
+    "close_notes"
+)
+
+
+def ensure_absent(module, table_client):
+    mapper = utils.PayloadMapper(PAYLOAD_FIELDS_MAPPING, module.warn)
+    query = utils.filter_dict(module.params, "sys_id", "number")
+    change = table_client.get_record("change_task", query)
+
+    if change:
+        table_client.delete_record("change_task", change, module.check_mode)
+        return True, None, dict(before=mapper.to_ansible(change), after=None)
+
+    return False, None, dict(before=None, after=None)
+
+
+def validate_params(params, change_request=None):
+    missing = []
+    if params.get("state") == "closed":
+        missing.extend(
+            validation.missing_from_params_and_remote(
+                ("close_code", "close_notes"), params, change_request
+            )
+        )
+
+    if params.get("on_hold") == "true":
+        compatibility = validation.check_value_incompatibility(
+            ("pending", "canceled", "closed"), "state", params, change_request
+        )
+        if compatibility[0] is False:
+            raise errors.ServiceNowError(
+                "Cannot put a task in state \"{}\" on hold".format(compatibility[1])
+            )
+        missing.extend(
+            validation.missing_from_params_and_remote(
+                ("hold_reason",), params, change_request
+            )
+        )
+
+    if missing:
+        raise errors.ServiceNowError(
+            "Missing required parameters {0}".format(", ".join(missing))
+        )
+
+
+def ensure_present(module, table_client):
+    mapper = utils.PayloadMapper(PAYLOAD_FIELDS_MAPPING, module.warn)
+    query = utils.filter_dict(module.params, "sys_id", "number")
+    payload = build_payload(module, table_client)
+
+    if not query:
+        # User did not specify an existing change task, so we need to create a new one.
+        validate_params(module.params)
+        new = mapper.to_ansible(
+            table_client.create_record(
+                "change_task", mapper.to_snow(payload), module.check_mode
+            )
+        )
+        return True, new, dict(before=None, after=new)
+
+    old = mapper.to_ansible(
+        table_client.get_record("change_task", query, must_exist=True)
+    )
+    if utils.is_superset(old, payload):
+        # No change in parameters we are interested in - nothing to do.
+        return False, old, dict(before=old, after=old)
+
+    validate_params(module.params, old)
+    new = mapper.to_ansible(
+        table_client.update_record(
+            "change_task",
+            mapper.to_snow(old),
+            mapper.to_snow(payload),
+            module.check_mode,
+        )
+    )
+    return True, new, dict(before=old, after=new)
+
+
+def build_payload(module, table_client):
+    payload = (module.params["other"] or {}).copy()
+    payload.update(utils.filter_dict(module.params, *DIRECT_PAYLOAD_FIELDS))
+
+    if module.params["type"]:
+        payload["change_task_type"] = payload["type"]
+
+    if module.params["hold_reason"]:
+        payload["on_hold_reason"] = module.params["hold_reason"]
+
+    # Map the configuration item
+    if module.params["configuration_item"]:
+        configuration_item = table.find_configuration_item(
+            table_client, module.params["configuration_item"]
+        )
+        payload["cmdb_ci"] = configuration_item["sys_id"]
+
+    if module.params["configuration_item_id"]:
+        payload["cmdb_ci"] = module.params["configuration_item_id"]
+
+    # Map the change request
+    if module.params["change_request_number"]:
+        configuration_item = table.find_configuration_item(
+            table_client, module.params["change_request_number"]
+        )
+        payload["change_request"] = configuration_item["sys_id"]
+
+    if module.params["change_request_id"]:
+        payload["change_request"] = module.params["change_request_id"]
+
+    # Map the assignee
+    if module.params["assigned_to"]:
+        user = table.find_user(table_client, module.params["assigned_to"])
+        payload["assigned_to"] = user["sys_id"]
+
+    # Map the assigned group
+    if module.params["assignment_group"]:
+        assignment_group = table.find_assignment_group(
+            table_client, module.params["assignment_group"]
+        )
+        payload["assignment_group"] = assignment_group["sys_id"]
+
+    return payload
+
+
+def run(module, table_client):
+    if module.params["state"] == "absent":
+        return ensure_absent(module, table_client)
+    return ensure_present(module, table_client)
+
+
+def main():
+    module_args = dict(
+        arguments.get_spec("instance", "sys_id", "number"),
+        configuration_item=dict(
+            type="str",
+        ),
+        configuration_item_id=dict(
+            type="str",
+        ),
+        change_request_id=dict(
+            type="str",
+        ),
+        change_request_number=dict(
+            type="str",
+        ),
+        type=dict(
+            type="str",
+            choices=[
+                "planning",
+                "implementation",
+                "testing",
+                "testing",
+            ],
+        ),
+        state=dict(
+            type="str",
+            choices=[
+                "pending",
+                "open",
+                "in_progress",
+                "closed",
+                "canceled",
+                "absent",
+            ],
+        ),
+        assigned_to=dict(
+            type="str",
+        ),
+        assignment_group=dict(
+            type="str",
+        ),
+        short_description=dict(
+            type="str",
+        ),
+        description=dict(
+            type="str",
+        ),
+        on_hold=dict(
+            type="bool",
+        ),
+        hold_reason=dict(
+            type="str",
+        ),
+        planned_start_date=dict(
+            type="datetime",
+        ),
+        planned_end_date=dict(
+            type="datetime",
+        ),
+        close_code=dict(
+            type="str",
+            choices=[
+                "successful",
+                "successful_issues",
+                "unsuccessful",
+            ],
+        ),
+        close_notes=dict(
+            type="str",
+        ),
+        other=dict(
+            type="dict",
+        ),
+    )
+
+    module = AnsibleModule(
+        argument_spec=module_args,
+        supports_check_mode=True,
+        required_if=[
+            ("state", "absent", ("sys_id", "number"), True)
+        ],
+        mutually_exclusive=[
+            ("change_request_id", "change_request_number"),
+            ("configuration_item_id", "configuration_item")
+        ],
+    )
+
+    try:
+        snow_client = client.Client(**module.params["instance"])
+        table_client = table.TableClient(snow_client)
+        changed, record, diff = run(module, table_client)
+        module.exit_json(changed=changed, record=record, diff=diff)
+    except errors.ServiceNowError as e:
+        module.fail_json(msg=str(e))
+
+
+if __name__ == "__main__":
+    main()

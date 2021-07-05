@@ -83,5 +83,9 @@ def find_standard_change_template(table_client, template_name):
     )
 
 
-def find_change_request(table_client, change_request_number=None):
+def find_change_request(table_client, change_request_number):
     return table_client.get_record("change_request", dict(number=change_request_number), must_exist=True)
+
+
+def find_configuration_item(table_client, item_name):
+    return table_client.get_record("cmdb_ci", dict(name=item_name), must_exist=True)

@@ -90,8 +90,12 @@ def remap_params(query, table_client):
             elif k == "hold_reason":
                 q["on_hold_reason"] = (v[0], v[1])
 
-            elif k == "configuration_item":
+            elif k == "configuration_item_id":
                 q["cmdb_ci"] = (v[0], v[1])
+
+            elif k == "configuration_item":
+                configuration_item = table.find_configuration_item(table_client, v[1])
+                q["cmdb_ci"] = (v[0], configuration_item["sys_id"])
 
             elif k == "change_request_id":
                 q["change_request"] = (v[0], v[1])

@@ -222,7 +222,7 @@ def validate_params(params, change_request=None):
             )
         )
 
-    if params.get("on_hold") == "true":
+    if params.get("on_hold"):
         compatibility = validation.check_value_incompatibility(
             ("pending", "canceled", "closed"), "state", params, change_request
         )

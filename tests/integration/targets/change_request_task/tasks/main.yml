@@ -1,0 +1,14 @@
+- environment:
+    SN_HOST: "{{ sn_host }}"
+    SN_USERNAME: "{{ sn_username }}"
+    SN_PASSWORD: "{{ sn_password }}"
+
+  block:
+    - name: Retrieve all change_requests
+      servicenow.itsm.change_request_info:
+      register: result
+
+    - ansible.builtin.assert:
+        that:
+          - result.records != []
+          - result.records | length != 0

@@ -81,18 +81,22 @@ def check_value_incompatibility(incompatible_states, property_name, params, reco
     if property_value in incompatible_states:
         return False, property_value
     # If the property doesn't exist, but may be set in the record
-    elif property_value is None and record is not None:
-        record_value = record.get(property_name)
-        # If the property isn't set anywhere
-        if record_value is None:
-            return False, None
-        property_value = record_value
-        # If a record exists and the desired property isn't in a compatible state
-        if property_value in incompatible_states:
-            return False, property_value
-        # If a record exists and is in a compatible state
+    elif property_value is None:
+        if record is not None:
+            record_value = record.get(property_name)
+            # If the property isn't set anywhere
+            if record_value is None:
+                return False, None
+            property_value = record_value
+            # If a record exists and the desired property isn't in a compatible state
+            if property_value in incompatible_states:
+                return False, property_value
+            # If a record exists and is in a compatible state
+            else:
+                return True, property_value
+        # Record doesn't exist
         else:
-            return True, property_value
+            return False, None
     # If the property is in an acceptable state
     else:
         return True, property_value

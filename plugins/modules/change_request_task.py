@@ -75,10 +75,12 @@ options:
   short_description:
     description:
       - A summary of the task.
+      - This field is mandatory.
     type: str
   description:
     description:
       - A detailed description of the task.
+      - This field is mandatory.
     type: str
   on_hold:
     description:
@@ -235,6 +237,13 @@ def validate_params(params, change_request=None):
                 ("hold_reason",), params, change_request
             )
         )
+
+    # Description must be set
+    missing.extend(
+        validation.missing_from_params_and_remote(
+            ("short_description", "description"), params, change_request
+        )
+    )
 
     if missing:
         raise errors.ServiceNowError(

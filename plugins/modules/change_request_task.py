@@ -188,7 +188,6 @@ from ..module_utils import arguments, client, table, errors, utils, validation
 from ..module_utils.change_request_task import PAYLOAD_FIELDS_MAPPING
 
 DIRECT_PAYLOAD_FIELDS = (
-    "type",
     "state",
     "assigned_to",
     "assignment_group",
@@ -290,7 +289,7 @@ def build_payload(module, table_client):
     payload.update(utils.filter_dict(module.params, *DIRECT_PAYLOAD_FIELDS))
 
     if module.params["type"]:
-        payload["change_task_type"] = payload["type"]
+        payload["change_task_type"] = module.params["type"]
 
     if module.params["hold_reason"]:
         payload["on_hold_reason"] = module.params["hold_reason"]

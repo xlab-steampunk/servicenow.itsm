@@ -194,7 +194,6 @@ DIRECT_PAYLOAD_FIELDS = (
     "short_description",
     "description",
     "on_hold",
-    "hold_reason",
     "planned_start_date",
     "planned_end_date",
     "close_code",

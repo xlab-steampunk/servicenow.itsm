@@ -75,12 +75,12 @@ options:
   short_description:
     description:
       - A summary of the task.
-      - This field is mandatory.
+      - This field has to be set either in the record or here.
     type: str
   description:
     description:
       - A detailed description of the task.
-      - This field is mandatory.
+      - This field has to be set either in the record or here.
     type: str
   on_hold:
     description:
@@ -230,11 +230,6 @@ def validate_params(params, change_request=None):
             raise errors.ServiceNowError(
                 "Cannot put a task in state \"{}\" on hold".format(compatibility[1])
             )
-        missing.extend(
-            validation.missing_from_params_and_remote(
-                ("hold_reason",), params, change_request
-            )
-        )
 
     # Description must be set
     missing.extend(
@@ -305,7 +300,7 @@ def build_payload(module, table_client):
 
     # Map the change request
     if module.params["change_request_number"]:
-        configuration_item = table.find_configuration_item(
+        configuration_item = table.find_change_request(
             table_client, module.params["change_request_number"]
         )
         payload["change_request"] = configuration_item["sys_id"]
@@ -413,7 +408,8 @@ def main():
         argument_spec=module_args,
         supports_check_mode=True,
         required_if=[
-            ("state", "absent", ("sys_id", "number"), True)
+            ("state", "absent", ("sys_id", "number"), True),
+            ("on_hold", True, ("hold_reason",)),
         ],
         mutually_exclusive=[
             ("change_request_id", "change_request_number"),

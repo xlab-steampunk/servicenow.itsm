@@ -70,14 +70,6 @@ class TestValidateParams:
         with pytest.raises(errors.ServiceNowError, match=missing_field):
             change_request_task.validate_params(params)
 
-    @pytest.mark.parametrize("missing_field", ["hold_reason", ])
-    def test_validate_params_missing_hold_reason(self, missing_field):
-        params = self.VALID_PARAMS_HOLD.copy()
-        params[missing_field] = None
-
-        with pytest.raises(errors.ServiceNowError, match=missing_field):
-            change_request_task.validate_params(params)
-
     @pytest.mark.parametrize("state,valid",
                              [("pending", False),
                               ("open", True),

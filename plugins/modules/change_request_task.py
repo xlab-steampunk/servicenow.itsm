@@ -96,13 +96,13 @@ options:
   planned_start_date:
     description:
       - The date you plan to begin working on the task.
-    type: datetime
+    type: str
   planned_end_date:
     description:
       - The date the change task is planned to be completed.
       - If the task I(type) is C(implementation), the I(planned_start_date) and I(planned_end_date) values 
       must fall within the planned start and end dates specified in the I(change_request).
-    type: datetime
+    type: str
   close_code:
     description:
       - Provide information on how the change task was resolved.
@@ -262,7 +262,7 @@ def ensure_present(module, table_client):
     old = mapper.to_ansible(
         table_client.get_record("change_task", query, must_exist=True)
     )
-    if utils.is_superset(old, payload):
+    if is_superset_with_date(old, payload):
         # No change in parameters we are interested in - nothing to do.
         return False, old, dict(before=old, after=old)
 
@@ -276,6 +276,18 @@ def ensure_present(module, table_client):
         )
     )
     return True, new, dict(before=old, after=new)
+
+
+def is_superset_with_date(superset, candidate):
+    for k, v in candidate.items():
+        if k not in superset or superset[k] != v:
+            if not (
+                    (k == "planned_start_date" or k == "planned_end_date") and
+                    (str(superset[k]) != "" and str(v) != "") and
+                    str(superset[k]).replace("T", " ") == str(v).replace("T", " ")
+            ):
+                return False
+    return True
 
 
 def build_payload(module, table_client):
@@ -383,10 +395,10 @@ def main():
             type="str",
         ),
         planned_start_date=dict(
-            type="datetime",
+            type="str",
         ),
         planned_end_date=dict(
-            type="datetime",
+            type="str",
         ),
         close_code=dict(
             type="str",

@@ -288,24 +288,6 @@ class TestEnsurePresent:
 
 
 class TestBuildPayload:
-    """
-    {"type": ("=", "planning")},
-    {"hold_reason": ("=", "Some reason")},
-    {"configuration_item_id": ("=", "4321")},
-    {"change_request_id": ("=", "1234")},
-    {"assigned_to": ("=", "some.user")},
-    {"assignment_group": ("=", "some.group")},
-    {"short_description": ("=", "Unmapped value")}
-
-    {"type": ("=", "planning")},
-    {"hold_reason": ("=", "Some reason")},
-    {"configuration_item": ("=", "config item")},
-    {"change_request_number": ("=", "CR1234")},
-    {"assigned_to": ("=", "some.user")},
-    {"assignment_group": ("=", "some.group")},
-    {"short_description": ("=", "Unmapped value")}
-    """
-
     def test_build_payload(self, create_module, table_client):
         module = create_module(
             params=dict(
@@ -407,3 +389,55 @@ class TestBuildPayload:
         assert "change_request_number" not in result
         assert "hold_reason" not in result
         assert "hold_reason" not in result
+
+
+class TestSupersetWithDateCheck:
+    @pytest.mark.parametrize(
+        "superset,candidate",
+        [
+            (dict(), dict()),
+            (dict(a=1), dict()),
+            (dict(a=1), dict(a=1)),
+            (dict(a=1, b=2), dict(b=2)),
+        ],
+    )
+    def test_valid_superset(self, superset, candidate):
+        assert change_request_task.is_superset_with_date(superset, candidate) is True
+
+    @pytest.mark.parametrize(
+        "superset,candidate",
+        [
+            (dict(), dict(a=1)),  # superset is missing a key
+            (dict(a=1), dict(a=2)),  # key value is different
+        ],
+    )
+    def test_not_a_superset(self, superset, candidate):
+        assert change_request_task.is_superset_with_date(superset, candidate) is False
+
+    @pytest.mark.parametrize(
+        "record,params",
+        [
+            (dict(planned_start_date="2021-07-09T08:40:33"), dict(planned_start_date="2021-07-09T08:40:33")),
+            (dict(planned_start_date="2021-07-09T08:40:33"), dict(planned_start_date="2021-07-09 08:40:33")),
+            (dict(planned_start_date="2021-07-09 08:40:33"), dict(planned_start_date="2021-07-09T08:40:33")),
+            (dict(planned_start_date="2021-07-09 08:40:33"), dict(planned_start_date="2021-07-09 08:40:33")),
+            (dict(planned_end_date="2021-07-09T08:40:33"), dict(planned_end_date="2021-07-09T08:40:33")),
+            (dict(planned_end_date="2021-07-09T08:40:33"), dict(planned_end_date="2021-07-09 08:40:33")),
+            (dict(planned_end_date="2021-07-09 08:40:33"), dict(planned_end_date="2021-07-09T08:40:33")),
+            (dict(planned_end_date="2021-07-09 08:40:33"), dict(planned_end_date="2021-07-09 08:40:33")),
+        ],
+    )
+    def test_valid_dates(self, record, params):
+        assert change_request_task.is_superset_with_date(record, params) is True
+
+    @pytest.mark.parametrize(
+        "record,params",
+        [
+            (dict(planned_start_date="2021-07-09 08:40:33"), dict(planned_start_date="2021-07-09 08:40:34")),
+            (dict(planned_start_date=""), dict(planned_start_date="2021-07-09 08:40:34")),
+            (dict(planned_start_date="2021-07-09 08:40:33"), dict(planned_start_date="")),
+            (dict(param="2021-07-09 08:40:33"), dict(param="2021-07-09T08:40:33")),
+        ],
+    )
+    def test_invalid_dates(self, record, params):
+        assert change_request_task.is_superset_with_date(record, params) is False

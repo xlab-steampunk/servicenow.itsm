@@ -69,7 +69,9 @@ def check_value_compatibility(compatible_states, property_name, params, record=N
         return False, property_value
 
 
-def check_value_incompatibility(incompatible_states, property_name, params, record=None):
+def check_value_incompatibility(
+    incompatible_states, property_name, params, record=None
+):
     """
     Given a list of incompatible states, a property name, params dict and a ServiceNow record, returns the check
     result and value of the checked property. Check result is True if property values aren't in the incompatible

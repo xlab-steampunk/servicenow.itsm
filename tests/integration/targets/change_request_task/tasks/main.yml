@@ -62,8 +62,7 @@
       servicenow.itsm.change_request_task: *create-change_request_task
       register: test_result
 
-    - name: Copy test_result into result
-      set_fact:
+    - set_fact:
         result: "{{ test_result }}"
 
     - ansible.builtin.assert: *create-change_request_task-result
@@ -145,6 +144,7 @@
           - result.records[0].state == "in_progress"
           - result.records[0].description == "Something changed"
           - result.records[0].change_task_type == "planning"
+
 
     - name: Update change_request_task with same params - unchanged
       servicenow.itsm.change_request_task: *update-change_request_task
@@ -242,6 +242,7 @@
         state: closed
       ignore_errors: true
       register: result
+
     - ansible.builtin.assert:
         that:
           - result is failed

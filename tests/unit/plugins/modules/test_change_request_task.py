@@ -57,12 +57,27 @@ class TestEnsureAbsent:
 
 
 class TestValidateParams:
-    VALID_PARAMS = dict(state="closed", close_code="successful", close_notes="Solved", description="dsc",
-                        short_description="sd")
-    VALID_PARAMS_HOLD = dict(state="in_progress", close_code="successful", close_notes="Solved", description="dsc",
-                             short_description="sd", on_hold=True, hold_reason="Waiting")
+    VALID_PARAMS = dict(
+        state="closed",
+        close_code="successful",
+        close_notes="Solved",
+        description="dsc",
+        short_description="sd",
+    )
+    VALID_PARAMS_HOLD = dict(
+        state="in_progress",
+        close_code="successful",
+        close_notes="Solved",
+        description="dsc",
+        short_description="sd",
+        on_hold=True,
+        hold_reason="Waiting",
+    )
 
-    @pytest.mark.parametrize("missing_field", ["close_code", "close_notes", "description", "short_description"])
+    @pytest.mark.parametrize(
+        "missing_field",
+        ["close_code", "close_notes", "description", "short_description"],
+    )
     def test_validate_params_missing_field(self, missing_field):
         params = self.VALID_PARAMS.copy()
         params[missing_field] = None
@@ -70,12 +85,16 @@ class TestValidateParams:
         with pytest.raises(errors.ServiceNowError, match=missing_field):
             change_request_task.validate_params(params)
 
-    @pytest.mark.parametrize("state,valid",
-                             [("pending", False),
-                              ("open", True),
-                              ("in_progress", True),
-                              ("closed", False),
-                              ("canceled", False)])
+    @pytest.mark.parametrize(
+        "state,valid",
+        [
+            ("pending", False),
+            ("open", True),
+            ("in_progress", True),
+            ("closed", False),
+            ("canceled", False),
+        ],
+    )
     def test_validate_params_on_hold_incompatible(self, state, valid):
         params = self.VALID_PARAMS_HOLD.copy()
         params["state"] = state
@@ -417,14 +436,38 @@ class TestSupersetWithDateCheck:
     @pytest.mark.parametrize(
         "record,params",
         [
-            (dict(planned_start_date="2021-07-09T08:40:33"), dict(planned_start_date="2021-07-09T08:40:33")),
-            (dict(planned_start_date="2021-07-09T08:40:33"), dict(planned_start_date="2021-07-09 08:40:33")),
-            (dict(planned_start_date="2021-07-09 08:40:33"), dict(planned_start_date="2021-07-09T08:40:33")),
-            (dict(planned_start_date="2021-07-09 08:40:33"), dict(planned_start_date="2021-07-09 08:40:33")),
-            (dict(planned_end_date="2021-07-09T08:40:33"), dict(planned_end_date="2021-07-09T08:40:33")),
-            (dict(planned_end_date="2021-07-09T08:40:33"), dict(planned_end_date="2021-07-09 08:40:33")),
-            (dict(planned_end_date="2021-07-09 08:40:33"), dict(planned_end_date="2021-07-09T08:40:33")),
-            (dict(planned_end_date="2021-07-09 08:40:33"), dict(planned_end_date="2021-07-09 08:40:33")),
+            (
+                dict(planned_start_date="2021-07-09T08:40:33"),
+                dict(planned_start_date="2021-07-09T08:40:33"),
+            ),
+            (
+                dict(planned_start_date="2021-07-09T08:40:33"),
+                dict(planned_start_date="2021-07-09 08:40:33"),
+            ),
+            (
+                dict(planned_start_date="2021-07-09 08:40:33"),
+                dict(planned_start_date="2021-07-09T08:40:33"),
+            ),
+            (
+                dict(planned_start_date="2021-07-09 08:40:33"),
+                dict(planned_start_date="2021-07-09 08:40:33"),
+            ),
+            (
+                dict(planned_end_date="2021-07-09T08:40:33"),
+                dict(planned_end_date="2021-07-09T08:40:33"),
+            ),
+            (
+                dict(planned_end_date="2021-07-09T08:40:33"),
+                dict(planned_end_date="2021-07-09 08:40:33"),
+            ),
+            (
+                dict(planned_end_date="2021-07-09 08:40:33"),
+                dict(planned_end_date="2021-07-09T08:40:33"),
+            ),
+            (
+                dict(planned_end_date="2021-07-09 08:40:33"),
+                dict(planned_end_date="2021-07-09 08:40:33"),
+            ),
         ],
     )
     def test_valid_dates(self, record, params):
@@ -433,9 +476,18 @@ class TestSupersetWithDateCheck:
     @pytest.mark.parametrize(
         "record,params",
         [
-            (dict(planned_start_date="2021-07-09 08:40:33"), dict(planned_start_date="2021-07-09 08:40:34")),
-            (dict(planned_start_date=""), dict(planned_start_date="2021-07-09 08:40:34")),
-            (dict(planned_start_date="2021-07-09 08:40:33"), dict(planned_start_date="")),
+            (
+                dict(planned_start_date="2021-07-09 08:40:33"),
+                dict(planned_start_date="2021-07-09 08:40:34"),
+            ),
+            (
+                dict(planned_start_date=""),
+                dict(planned_start_date="2021-07-09 08:40:34"),
+            ),
+            (
+                dict(planned_start_date="2021-07-09 08:40:33"),
+                dict(planned_start_date=""),
+            ),
             (dict(param="2021-07-09 08:40:33"), dict(param="2021-07-09T08:40:33")),
         ],
     )

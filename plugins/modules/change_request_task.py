@@ -197,7 +197,7 @@ DIRECT_PAYLOAD_FIELDS = (
     "planned_start_date",
     "planned_end_date",
     "close_code",
-    "close_notes"
+    "close_notes",
 )
 
 
@@ -228,7 +228,7 @@ def validate_params(params, change_request=None):
         )
         if compatibility[0] is False:
             raise errors.ServiceNowError(
-                "Cannot put a task in state \"{}\" on hold".format(compatibility[1])
+                'Cannot put a task in state "{}" on hold'.format(compatibility[1])
             )
 
     # Description must be set
@@ -282,9 +282,9 @@ def is_superset_with_date(superset, candidate):
     for k, v in candidate.items():
         if k not in superset or superset[k] != v:
             if not (
-                    (k == "planned_start_date" or k == "planned_end_date") and
-                    (str(superset[k]) != "" and str(v) != "") and
-                    str(superset[k]).replace("T", " ") == str(v).replace("T", " ")
+                (k == "planned_start_date" or k == "planned_end_date")
+                and (str(superset[k]) != "" and str(v) != "")
+                and str(superset[k]).replace("T", " ") == str(v).replace("T", " ")
             ):
                 return False
     return True
@@ -425,7 +425,7 @@ def main():
         ],
         mutually_exclusive=[
             ("change_request_id", "change_request_number"),
-            ("configuration_item_id", "configuration_item")
+            ("configuration_item_id", "configuration_item"),
         ],
     )
 

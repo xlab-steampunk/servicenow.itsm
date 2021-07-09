@@ -175,4 +175,3 @@ class TestFindConfigurationItem:
         user = table.find_change_request(table_client, "TST123")
 
         assert dict(sys_id="1234", name="TST123") == user
-

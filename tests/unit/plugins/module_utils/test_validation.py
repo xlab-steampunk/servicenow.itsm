@@ -75,111 +75,6 @@ class TestMissingFromParamsAndRemote:
             validation.missing_from_params_and_remote(["a"], module_params, record)
 
 
-class TestValueCompatibility:
-    @pytest.mark.parametrize(
-        "compatible_states,property_name,params,record,resulting_property",
-        [
-            (
-                ("a",),
-                "p",
-                dict(p="a"),
-                None,
-                "a",
-            ),  # state set correctly during the module execution
-            (
-                ("a", "c"),
-                "p",
-                dict(p="c"),
-                None,
-                "c",
-            ),  # state set correctly during the module execution
-            (
-                ("a",),
-                "p",
-                dict(),
-                dict(p="a"),
-                "a",
-            ),  # state already correct, parameters don't change said state
-            (
-                ("a", "c"),
-                "p",
-                dict(p="c"),
-                dict(p="a"),
-                "c",
-            ),  # state correct, but value changed
-            (
-                ("a",),
-                "p",
-                dict(p="a"),
-                dict(p="a"),
-                "a",
-            ),  # state set during module execution, also okay beforehand
-            (
-                ("a",),
-                "p",
-                dict(p="a"),
-                dict(p="b"),
-                "a",
-            ),  # state used to be incompatible, is now set correctly
-        ],
-    )
-    def test_state_compatible(
-        self, compatible_states, property_name, params, record, resulting_property
-    ):
-        assert (True, resulting_property) == validation.check_value_compatibility(
-            compatible_states, property_name, params, record
-        )
-
-    @pytest.mark.parametrize(
-        "compatible_states,property_name,params,record,resulting_property",
-        [
-            (
-                ("a",),
-                "p",
-                dict(p="b"),
-                None,
-                "b",
-            ),  # state set incorrectly during the module execution
-            (
-                ("a", "c"),
-                "p",
-                dict(p="d"),
-                None,
-                "d",
-            ),  # state set incorrectly during the module execution
-            (
-                ("a",),
-                "p",
-                dict(),
-                dict(p="b"),
-                "b",
-            ),  # state already incorrect and not corrected
-            (
-                ("a",),
-                "p",
-                dict(p="b"),
-                dict(p="a"),
-                "b",
-            ),  # state correct in the record but not in the module
-            (
-                ("a",),
-                "p",
-                dict(p="c"),
-                dict(p="b"),
-                "c",
-            ),  # state wrong in the record, new state also wrong
-            (("a",), "p", dict(), dict(), None),  # state not set
-            (("a",), "p", dict(), None, None),  # state not set, record doesn't exist
-        ],
-    )
-    def test_state_not_compatible(
-        self, compatible_states, property_name, params, record, resulting_property
-    ):
-        assert (False, resulting_property) == validation.check_value_compatibility(
-            compatible_states, property_name, params, record
-        )
-
-
 class TestValueIncompatibility:
     @pytest.mark.parametrize(
         "incompatible_states,property_name,params,record,resulting_property",
@@ -201,7 +96,7 @@ class TestValueIncompatibility:
             (
                 ("a",),
                 "p",
-                dict(),
+                dict(p=None),
                 dict(p="b"),
                 "b",
             ),  # state already correct, parameters don't change said state
@@ -226,6 +121,8 @@ class TestValueIncompatibility:
                 dict(p="a"),
                 "b",
             ),  # state used to be incompatible, is now set correctly
+            (("a",), "p", dict(p=None), dict(), None),  # state not set
+            (("a",), "p", dict(p=None), None, None),  # state not set, record doesn't exist
         ],
     )
     def test_state_compatible(
@@ -257,7 +154,7 @@ class TestValueIncompatibility:
             (
                 ("a",),
                 "p",
-                dict(),
+                dict(p=None),
                 dict(p="a"),
                 "a",
             ),  # state already incorrect and not corrected
@@ -268,8 +165,6 @@ class TestValueIncompatibility:
                 dict(p="b"),
                 "a",
             ),  # state correct in the record but not in the module
-            (("a",), "p", dict(), dict(), None),  # state not set
-            (("a",), "p", dict(), None, None),  # state not set, record doesn't exist
         ],
     )
     def test_state_not_compatible(

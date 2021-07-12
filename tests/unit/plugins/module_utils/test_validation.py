@@ -73,3 +73,109 @@ class TestMissingFromParamsAndRemote:
     def test_invalid_wrong_param_value_type(self, module_params, record):
         with pytest.raises(errors.ServiceNowError, match="text or None"):
             validation.missing_from_params_and_remote(["a"], module_params, record)
+
+
+class TestValueIncompatibility:
+    @pytest.mark.parametrize(
+        "incompatible_states,property_name,params,record,resulting_property",
+        [
+            (
+                ("a",),
+                "p",
+                dict(p="b"),
+                None,
+                "b",
+            ),  # state set correctly during the module execution
+            (
+                ("a", "c"),
+                "p",
+                dict(p="b"),
+                None,
+                "b",
+            ),  # state set correctly during the module execution
+            (
+                ("a",),
+                "p",
+                dict(p=None),
+                dict(p="b"),
+                "b",
+            ),  # state already correct, parameters don't change said state
+            (
+                ("a", "c"),
+                "p",
+                dict(p="d"),
+                dict(p="b"),
+                "d",
+            ),  # state correct, but value changed
+            (
+                ("a",),
+                "p",
+                dict(p="b"),
+                dict(p="b"),
+                "b",
+            ),  # state set during module execution, also okay beforehand
+            (
+                ("a",),
+                "p",
+                dict(p="b"),
+                dict(p="a"),
+                "b",
+            ),  # state used to be incompatible, is now set correctly
+            (("a",), "p", dict(p=None), dict(), None),  # state not set
+            (
+                ("a",),
+                "p",
+                dict(p=None),
+                None,
+                None,
+            ),  # state not set, record doesn't exist
+        ],
+    )
+    def test_state_compatible(
+        self, incompatible_states, property_name, params, record, resulting_property
+    ):
+        result = validation.check_value_incompatibility(
+            incompatible_states, property_name, params, record
+        )
+        print(result)
+        assert (True, resulting_property) == result
+
+    @pytest.mark.parametrize(
+        "incompatible_states,property_name,params,record,resulting_property",
+        [
+            (
+                ("a",),
+                "p",
+                dict(p="a"),
+                None,
+                "a",
+            ),  # state set incorrectly during the module execution
+            (
+                ("a", "c"),
+                "p",
+                dict(p="c"),
+                None,
+                "c",
+            ),  # state set incorrectly during the module execution
+            (
+                ("a",),
+                "p",
+                dict(p=None),
+                dict(p="a"),
+                "a",
+            ),  # state already incorrect and not corrected
+            (
+                ("a",),
+                "p",
+                dict(p="a"),
+                dict(p="b"),
+                "a",
+            ),  # state correct in the record but not in the module
+        ],
+    )
+    def test_state_not_compatible(
+        self, incompatible_states, property_name, params, record, resulting_property
+    ):
+        assert (False, resulting_property) == validation.check_value_incompatibility(
+            incompatible_states, property_name, params, record
+        )

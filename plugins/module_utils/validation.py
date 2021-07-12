@@ -38,3 +38,21 @@ def missing_from_params_and_remote(params, module_params, record=None):
             continue
         missing.append(p)
     return missing
+
+
+def check_value_incompatibility(
+    incompatible_values, property_name, params, record=None
+):
+    """
+    Given a list of incompatible values, a property name, params dict and a ServiceNow record, returns the check
+    result and value of the checked property. Check result is True if property values aren't in the incompatible
+    value list and False otherwise. The function assumes that new parameters override the record.
+    """
+
+    # Get value in effect
+    value = params[property_name]
+    if value is None:
+        value = (record or {}).get(property_name)
+
+    # Make sure value is not in the set of invalid values
+    return value not in incompatible_values, value

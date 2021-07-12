@@ -197,14 +197,14 @@ def ensure_absent(module, table_client):
 
 def validate_params(params, change_request=None):
     missing = []
-    if params.get("state") == "closed":
+    if params["state"] == "closed":
         missing.extend(
             validation.missing_from_params_and_remote(
                 ("close_code", "close_notes"), params, change_request
             )
         )
 
-    if params.get("on_hold"):
+    if params["on_hold"]:
         compatibility = validation.check_value_incompatibility(
             ("pending", "canceled", "closed"), "state", params, change_request
         )

@@ -189,8 +189,6 @@ from ..module_utils.change_request_task import PAYLOAD_FIELDS_MAPPING
 
 DIRECT_PAYLOAD_FIELDS = (
     "state",
-    "assigned_to",
-    "assignment_group",
     "short_description",
     "description",
     "on_hold",

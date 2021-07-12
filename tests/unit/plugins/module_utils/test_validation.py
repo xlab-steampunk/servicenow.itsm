@@ -122,7 +122,13 @@ class TestValueIncompatibility:
                 "b",
             ),  # state used to be incompatible, is now set correctly
             (("a",), "p", dict(p=None), dict(), None),  # state not set
-            (("a",), "p", dict(p=None), None, None),  # state not set, record doesn't exist
+            (
+                ("a",),
+                "p",
+                dict(p=None),
+                None,
+                None,
+            ),  # state not set, record doesn't exist
         ],
     )
     def test_state_compatible(

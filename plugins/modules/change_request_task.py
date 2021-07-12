@@ -36,6 +36,8 @@ options:
   configuration_item:
     description:
       - The configuration item (CI) or service name that the change task applies to.
+      - Note that contrary to configuration_item_id, configuration item names may not uniquely identify a record.
+        In case there are more configuration items with the same name, the module fails and does nothing.
       - Mutually exclusive with I(configuration_item_id).
     type: str
   configuration_item_id:
@@ -43,15 +45,17 @@ options:
       - The configuration item (CI) or service ID that the change task applies to.
       - Mutually exclusive with I(configuration_item).
     type: str
+  change_request_number:
+    description:
+      - I(number) of the change request this task belongs to.
+      - Note that contrary to change_request_id, change request number may not uniquely identify a record.
+        In case there are more change requests with the same number, the module fails and does nothing.
+      - Mutually exclusive with I(change_request_id).
+    type: str
   change_request_id:
     description:
       - I(sys_id) of the change request this task belongs to.
       - Mutually exclusive with I(change_request_number).
-    type: str
-  change_request_number:
-    description:
-      - I(number) of the change request this task belongs to.
-      - Mutually exclusive with I(change_request_id).
     type: str
   type:
     description:
@@ -128,11 +132,6 @@ options:
 EXAMPLES = """
 - name: Create a change task
   servicenow.itsm.change_request_task:
-    instance:
-      host: https://instance_id.service-now.com
-      username: user
-      password: pass
-
     configuration_item: Rogue Squadron Launcher
     change_request_number: CHG0000001
     type: planning
@@ -150,22 +149,12 @@ EXAMPLES = """
   
 - name: Change state of the change task
   servicenow.itsm.change_request_task:
-    instance:
-      host: https://instance_id.service-now.com
-      username: user
-      password: pass
-
     state: in_progress
     on_hold: false
     number: CTASK0000001
 
 - name: Close a change task
   servicenow.itsm.change_request_task:
-    instance:
-      host: https://instance_id.service-now.com
-      username: user
-      password: pass
-
     state: closed
     close_code: "successful"
     close_notes: "Closed"
@@ -173,11 +162,6 @@ EXAMPLES = """
 
 - name: Delete a change task
   servicenow.itsm.change_request_task:
-    instance:
-      host: https://instance_id.service-now.com
-      username: user
-      password: pass
-
     state: absent
     number: CTASK0000001
 """

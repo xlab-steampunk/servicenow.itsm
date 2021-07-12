@@ -26,6 +26,7 @@ class TestEnsureAbsent:
                 state="absent",
                 number="CTASK0000001",
                 sys_id=None,
+                on_hold=None,
             )
         )
         table_client.get_record.return_value = dict(state="3", number="CTASK0000001")
@@ -46,6 +47,7 @@ class TestEnsureAbsent:
                 state="absent",
                 number=None,
                 sys_id="1234",
+                on_hold=None,
             ),
         )
         table_client.get_record.return_value = None
@@ -63,6 +65,7 @@ class TestValidateParams:
         close_notes="Solved",
         description="dsc",
         short_description="sd",
+        on_hold=None,
     )
     VALID_PARAMS_HOLD = dict(
         state="in_progress",
@@ -95,7 +98,7 @@ class TestValidateParams:
             ("canceled", False),
         ],
     )
-    def test_validate_params_on_hold_incompatible(self, state, valid):
+    def test_validate_params_put_on_hold(self, state, valid):
         params = self.VALID_PARAMS_HOLD.copy()
         params["state"] = state
 
@@ -104,6 +107,28 @@ class TestValidateParams:
         else:
             with pytest.raises(errors.ServiceNowError, match=state):
                 change_request_task.validate_params(params)
+
+    @pytest.mark.parametrize(
+        "state,valid",
+        [
+            ("pending", False),
+            ("open", True),
+            ("in_progress", True),
+            ("closed", True),
+            ("canceled", True),
+        ],
+    )
+    def test_validate_params_change_state_already_on_hold(self, state, valid):
+        params = self.VALID_PARAMS.copy()
+        params["state"] = state
+
+        if valid:
+            change_request_task.validate_params(
+                self.VALID_PARAMS_HOLD, self.VALID_PARAMS_HOLD
+            )
+        else:
+            with pytest.raises(errors.ServiceNowError, match=state):
+                change_request_task.validate_params(params, self.VALID_PARAMS_HOLD)
 
     def test_validate_params(self):
         change_request_task.validate_params(self.VALID_PARAMS)

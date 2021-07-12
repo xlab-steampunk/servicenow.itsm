@@ -39,7 +39,7 @@
       servicenow.itsm.change_request_task: &create-change_request_task
         change_request_number: "{{ change_request_result.record.number }}"
         type: planning
-        state: open
+        state: pending
         short_description: "Implement collision avoidance"
         description: "Implement collision avoidance based on the newly installed TOF sensor arrays."
         other:
@@ -52,7 +52,7 @@
           - result is changed
           - result.record.change_request == change_request_result.record.sys_id
           - result.record.change_task_type == "planning"
-          - result.record.state == "open"
+          - result.record.state == "pending"
           - result.record.short_description == "Implement collision avoidance"
           - result.record.description == "Implement collision avoidance based on the newly installed TOF sensor arrays."
           - result.record.approval == "approved"
@@ -78,7 +78,7 @@
           - result.records[0].sys_id == test_result.record.sys_id
           - result.records[0].change_request == change_request_result.record.sys_id
           - result.records[0].change_task_type == "planning"
-          - result.records[0].state == "open"
+          - result.records[0].state == "pending"
           - result.records[0].short_description == "Implement collision avoidance"
           - result.records[0].description == "Implement collision avoidance based on the newly installed TOF sensor arrays."
           - result.records[0].approval == "approved"
@@ -89,7 +89,7 @@
         number: "{{ test_result.record.number }}"
         change_request_id: "{{ change_request_result.record.sys_id }}"
         type: planning
-        state: open
+        state: pending
       register: result
 
     - ansible.builtin.assert:
@@ -108,6 +108,19 @@
         that:
           - result is failed
           - "'on_hold is True but all of the following are missing: hold_reason'"
+
+
+    - name: Set on hold while in state pending (should fail due to on_hold and state value incompatibility)
+      servicenow.itsm.change_request_task:
+        on_hold: true
+        hold_reason: "Not enough resources for the task"
+      ignore_errors: true
+      register: result
+
+    - ansible.builtin.assert:
+        that:
+          - result is failed
+          - "'Cannot put a task in state \"pending\" on hold'"
 
 
     - name: Update change_request_task - check mode
@@ -234,6 +247,18 @@
     - ansible.builtin.assert:
         that:
           - result is not changed
+
+
+    - name: Set state to pending while on hold (should fail due to on_hold and state value incompatibility)
+      servicenow.itsm.change_request_task:
+        state: pending
+      ignore_errors: true
+      register: result
+
+    - ansible.builtin.assert:
+        that:
+          - result is failed
+          - "'Cannot change task state to \"pending\" when on hold'"
 
 
     - name: Fail to close the task

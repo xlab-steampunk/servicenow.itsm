@@ -66,6 +66,8 @@ options:
   state:
     description:
       - The state of the change request task.
+      - Cannot be changed to C(pending) when I(on_hold) is C(true)
+        (module fails and does nothing).
     choices: [ pending, open, in_progress, closed, canceled, absent ]
     type: str
   assigned_to:
@@ -88,8 +90,8 @@ options:
     type: str
   on_hold:
     description:
-      - A change task can be put on hold when I(state)
-        is not in the C(pending), C(canceled), or C(closed).
+      - A change task can be put on hold when I(state) is not in the C(pending), C(canceled), or C(closed)
+        (module fails and does nothing).
       - Provide an On hold reason if a change task is placed on hold.
     type: bool
   hold_reason:
@@ -205,12 +207,20 @@ def validate_params(params, change_request=None):
         )
 
     if params["on_hold"]:
-        compatibility = validation.check_value_incompatibility(
+        compatible, state = validation.check_value_incompatibility(
             ("pending", "canceled", "closed"), "state", params, change_request
         )
-        if compatibility[0] is False:
+        if not compatible:
             raise errors.ServiceNowError(
-                'Cannot put a task in state "{}" on hold'.format(compatibility[1])
+                'Cannot put a task in state "{}" on hold'.format(state)
+            )
+    elif (change_request or {}).get("on_hold"):
+        compatible, state = validation.check_value_incompatibility(
+            ("pending",), "state", params, change_request
+        )
+        if not compatible:
+            raise errors.ServiceNowError(
+                'Cannot change task state to "{}" when on hold'.format(state)
             )
 
     # Description must be set
